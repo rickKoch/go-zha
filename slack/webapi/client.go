@@ -70,6 +70,48 @@ func (c *Client) RtmStart() (*RtmStart, error) {
 	return rtmStart, nil
 }
 
+// Post creates post request to the slack api
+func (c *Client) Post(method string, body url.Values, response interface{}) error {
+	endpoint := c.endpointGenerator(method, nil)
+
+	resp, err := http.PostForm(endpoint.String(), body)
+	if err != nil {
+		switch e := err.(type) {
+		case *url.Error:
+			return e
+		default:
+			panic(fmt.Sprintf("error on http post request %#v", e))
+		}
+	}
+
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return NewResponseError(fmt.Sprintf("response status error. status %d.", resp.StatusCode), resp)
+	}
+
+	readResp, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return err
+	}
+
+	if err := json.Unmarshal(readResp, response); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// PostMessage creates post request to the chat.postMessage slack method
+func (c *Client) PostMessage(message *PostMessage) (*APIResponse, error) {
+	response := &APIResponse{}
+	err := c.Post("chat.postMessage", message.ToURLValues(), &response)
+	if err != nil {
+		return nil, err
+	}
+
+	return response, nil
+}
+
 func (c *Client) endpointGenerator(method string, params *url.Values) *url.URL {
 	if params == nil {
 		params = &url.Values{}

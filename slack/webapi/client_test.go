@@ -3,6 +3,7 @@
 package webapi
 
 import (
+	"net/url"
 	"testing"
 
 	"github.com/jarcoal/httpmock"
@@ -127,4 +128,79 @@ func TestRtmStart(t *testing.T) {
 	if rtmStart.URL != testURL {
 		t.Errorf("URL is not returned properly %#v", rtmStart)
 	}
+}
+
+func TestPost(t *testing.T) {
+	httpmock.Activate()
+	defer httpmock.DeactivateAndReset()
+
+	responder, _ := httpmock.NewJsonResponder(200, &APIResponse{OK: true})
+	httpmock.RegisterResponder(
+		"POST",
+		"https://slack.com/api/test",
+		responder,
+	)
+
+	client := NewClient("123")
+	response := &APIResponse{}
+	err := client.Post("test", url.Values{}, response)
+
+	if err != nil {
+		t.Errorf("something went wrong %#v", err)
+	}
+}
+
+func TestPostStatusError(t *testing.T) {
+	httpmock.Activate()
+	defer httpmock.DeactivateAndReset()
+
+	status := 404
+	responder := httpmock.NewStringResponder(status, "testing")
+
+	httpmock.RegisterResponder(
+		"POST",
+		"https://slack.com/api/test",
+		responder,
+	)
+
+	client := NewClient("123123123")
+	response := &APIResponse{}
+	err := client.Post("test", url.Values{}, response)
+
+	switch e := err.(type) {
+	case nil:
+		t.Errorf("there should be an error on %d status", status)
+	case *ResponseError:
+		if e.Response.StatusCode != status {
+			t.Errorf("error status code should be %d, not %d", status, e.Response.StatusCode)
+		}
+	default:
+		t.Errorf("%#v is returned while the ResponseError should be returned", err)
+	}
+}
+
+func TestPostMessage(t *testing.T) {
+	httpmock.Activate()
+	defer httpmock.DeactivateAndReset()
+
+	response := &APIResponse{OK: true}
+	responder, _ := httpmock.NewJsonResponder(200, response)
+	httpmock.RegisterResponder(
+		"POST",
+		"https://slack.com/api/chat.postMessage",
+		responder,
+	)
+
+	post := NewPostMessage("channel", "some message")
+	client := NewClient("123123")
+	response, err := client.PostMessage(post)
+
+	if err != nil {
+		t.Errorf("something went wrong %#v", err)
+	}
+
+	if response.OK != true {
+		t.Errorf("OK status is wrong %#v", response)
+	}
+
 }

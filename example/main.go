@@ -6,6 +6,7 @@ import (
 	"gitlab.com/kochevRisto/go-zha/slack/webapi"
 )
 
+// TestResponse test
 type TestResponse struct {
 	webapi.APIResponse
 	Self     *webapi.Self      `json:"self,omitempty"`
@@ -17,11 +18,21 @@ func main() {
 
 	client := webapi.NewClient("xoxb-953511947447-940297123539-R4O3Cxt6W2Od0UuEQrOTXqwt")
 
-	rtmStart, err := client.RtmStart()
+	response, err := client.PostMessage(&webapi.PostMessage{
+		Channel: "CTPF3NZ8R",
+		Text:    "testing 123123",
+	})
+
 	if err != nil {
-		fmt.Println(err)
+		fmt.Printf("error: %#v", err)
 	}
-	fmt.Println(rtmStart)
+
+	fmt.Println(response)
+	// rtmStart, err := client.RtmStart()
+	// if err != nil {
+	// 	fmt.Println(err)
+	// }
+	// fmt.Println(rtmStart)
 
 	// // response := &TestResponse{}
 	// // params := &url.Values{}
