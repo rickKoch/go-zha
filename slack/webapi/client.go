@@ -28,11 +28,9 @@ func NewClient(token string) *Client {
 // ex. https://api.slack.com/methods/conversations.history
 func (c *Client) Get(method string, queryParams *url.Values, unmarshaledResponse interface{}) error {
 	endpoint := c.endpointGenerator(method, queryParams)
-	fmt.Println(endpoint.String())
 
 	resp, err := http.Get(endpoint.String())
 	if err != nil {
-		fmt.Println(err, "error")
 		switch e := err.(type) {
 		case *url.Error:
 			return e
