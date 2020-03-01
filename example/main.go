@@ -1,93 +1,112 @@
 package main
 
 import (
-	"fmt"
+	"sort"
+	"strings"
 
-	"gitlab.com/kochevRisto/go-zha/slack/rtmapi"
-	"gitlab.com/kochevRisto/go-zha/slack/webapi"
+	"github.com/pkg/errors"
+	"gitlab.com/kochevRisto/go-zha"
+	"gitlab.com/kochevRisto/go-zha/redis-memory"
+	"gitlab.com/kochevRisto/go-zha/slack"
 )
 
+type ExampleBot struct {
+	*zha.Bot
+}
+
 func main() {
-	// ================================
-	// RTM (websocket connection)
-	// ================================
-	webClient := webapi.NewClient("xoxb-953511947447-940297123539-R4O3Cxt6W2Od0UuEQrOTXqwt")
-	rtmStart, err := webClient.RtmStart()
+
+	adapter := slack.NewAdapter("xoxb-953511947447-940297123539-R4O3Cxt6W2Od0UuEQrOTXqwt")
+	bot := &ExampleBot{
+		Bot: zha.NewBot(
+			"test",
+			// file.MemoryOption("./test.json")),
+			redis.Memory("localhost:6379", redis.WithKey("risto-bot")),
+		),
+	}
+
+	adapter(bot.Bot)
+
+	bot.Respond("remember (.+) is (.+)", bot.Remember)
+	bot.Respond(`(what is) ([^?]+)\s*\??(.*)`, bot.WhatIs)
+	bot.Respond(`forget (.+)`, bot.Forget)
+	bot.Respond(`(.*)what do you remember\??(.*)`, bot.WhatDoYouRemember)
+
+	bot.Run()
+
+}
+
+// Remember a value for a given key.
+//   command: bot remember <key> is <value>
+func (b *ExampleBot) Remember(msg zha.Message) error {
+	key, value := msg.Matches[0], msg.Matches[1]
+	key = strings.TrimSpace(key)
+	msg.Respond("\nOK, I'll remember %s is %s\n", key, value)
+	return b.Memory.Set(key, value)
+}
+
+// WhatIs test
+func (b *ExampleBot) WhatIs(msg zha.Message) error {
+	key := strings.TrimSpace(msg.Matches[1])
+	value, ok, err := b.Memory.Get(key)
 	if err != nil {
-		fmt.Println(err)
+		return errors.Wrapf(err, "failed to retrieve key %q from brain", key)
 	}
 
-	rtmClient := rtmapi.NewClient()
-	conn, err := rtmClient.Connect(rtmStart.URL)
+	if ok {
+		msg.Respond("\n%s is %s\n", key, value)
+	} else {
+		msg.Respond("\nI do not remember %q\n", key)
+	}
+
+	return nil
+}
+
+// Forget test
+func (b *ExampleBot) Forget(msg zha.Message) error {
+	key := strings.TrimSpace(msg.Matches[0])
+	value, _, _ := b.Memory.Get(key)
+	ok, err := b.Memory.Delete(key)
 	if err != nil {
-		fmt.Printf("error: %#v", err)
+		return errors.Wrapf(err, "failed to delete key %q from brain", key)
 	}
 
-	input := make([]byte, 17)
-	if _, err := conn.Read(input); err != nil {
-		fmt.Printf("error: %#v", err)
+	if !ok {
+		msg.Respond("\n I do not remember %q\n", key)
+	} else {
+		msg.Respond("\n I've forgotten %s is %s.\n", key, value)
 	}
 
-	event, err := rtmClient.PaylaodDecoder(input)
+	return nil
+}
+
+// WhatDoYouRemember test
+func (b *ExampleBot) WhatDoYouRemember(msg zha.Message) error {
+	data, err := b.Memory.Memories()
 	if err != nil {
-		fmt.Printf("error: %#v", err)
+		return errors.Wrap(err, "failed to retrieve all memories from brain")
 	}
 
-	fmt.Println(event)
+	switch len(data) {
+	case 0:
+		msg.Respond("\nI do not remember anything\n")
+		return nil
+	case 1:
+		msg.Respond("\nI have only a single memory:\n")
+	default:
+		msg.Respond("\nI have %d memories:\n", len(data))
+	}
 
-	// TestResponse test
-	// type TestResponse struct {
-	// 	webapi.APIResponse
-	// 	Self     *webapi.Self      `json:"self,omitempty"`
-	// 	Team     *webapi.Team      `json:"team,omitempty"`
-	// 	Channels []*webapi.Channel `json:"channels,omitempty"`
-	// }
+	keys := make([]string, 0, len(data))
+	for key := range data {
+		keys = append(keys, key)
+	}
 
-	// ================================
-	// Post Request
-	// ================================
-	// client := webapi.NewClient("xoxb-953511947447-940297123539-R4O3Cxt6W2Od0UuEQrOTXqwt")
+	sort.Strings(keys)
+	for _, key := range keys {
+		value := data[key]
+		msg.Respond("\n%s is %s\n", key, value)
+	}
 
-	// response, err := client.PostMessage(&webapi.PostMessage{
-	// 	Channel: "CTPF3NZ8R",
-	// 	Text:    "testing 123123",
-	// })
-
-	// if err != nil {
-	// 	fmt.Printf("error: %#v", err)
-	// }
-
-	// fmt.Println(response)
-
-	// ================================
-	// Get Request
-	// ================================
-	// client := webapi.NewClient("xoxb-953511947447-940297123539-R4O3Cxt6W2Od0UuEQrOTXqwt")
-	// rtmStart, err := client.RtmStart()
-	// if err != nil {
-	// 	fmt.Println(err)
-	// }
-	// fmt.Println(rtmStart)
-
-	// // response := &TestResponse{}
-	// // params := &url.Values{}
-	// // params.Add("channel", "CTPF3NZ8R")
-	// // err := client.Get("conversations.history", nil, response)
-	// // if err != nil {
-	// // 	fmt.Println(err)
-	// // }
-
-	// // fmt.Println(response)
-
-	// response := &TestResponse{}
-	// // params := &url.Values{}
-	// // params.Add("channel", "CTPF3NZ8R")
-	// err := client.Get("channels.list", nil, response)
-	// if err != nil {
-	// 	fmt.Println(err)
-	// }
-
-	// for _, channel := range response.Channels {
-	// 	fmt.Printf("\n%#v", channel)
-	// }
+	return nil
 }

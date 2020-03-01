@@ -32,7 +32,7 @@ func TestGet(t *testing.T) {
 		responder,
 	)
 
-	client := NewClient("testing")
+	client := NewClient("123")
 	response := &TestResponse{}
 	err := client.Get("this.is.test", nil, response)
 
@@ -62,7 +62,7 @@ func TestGetStatusError(t *testing.T) {
 		responder,
 	)
 
-	client := NewClient("123123")
+	client := NewClient("123")
 	response := &TestResponse{}
 
 	err := client.Get("test", nil, response)
@@ -89,7 +89,7 @@ func TestGetJSONError(t *testing.T) {
 		httpmock.NewStringResponder(200, "invalid json"),
 	)
 
-	client := NewClient("123123")
+	client := NewClient("123")
 	response := &TestResponse{}
 
 	err := client.Get("test", nil, response)
@@ -117,7 +117,7 @@ func TestRtmStart(t *testing.T) {
 		responder,
 	)
 
-	client := NewClient("12312321")
+	client := NewClient("123")
 
 	rtmStart, err := client.RtmStart()
 
@@ -163,7 +163,7 @@ func TestPostStatusError(t *testing.T) {
 		responder,
 	)
 
-	client := NewClient("123123123")
+	client := NewClient("123")
 	response := &APIResponse{}
 	err := client.Post("test", url.Values{}, response)
 
@@ -192,7 +192,7 @@ func TestPostMessage(t *testing.T) {
 	)
 
 	post := NewPostMessage("channel", "some message")
-	client := NewClient("123123")
+	client := NewClient("123")
 	response, err := client.PostMessage(post)
 
 	if err != nil {

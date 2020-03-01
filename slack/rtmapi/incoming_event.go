@@ -3,6 +3,7 @@ package rtmapi
 import (
 	"encoding/json"
 	"errors"
+	"time"
 )
 
 // Hello event is sent from slack when WebSocket connection is successfull.
@@ -22,6 +23,26 @@ type Message struct {
 	User      string    `json:"user"`
 	Text      string    `json:"text"`
 	TimeStamp TimeStamp `json:"ts"`
+}
+
+// GetSenderID returns sender's identifier.
+func (message *Message) GetSenderID() string {
+	return message.User
+}
+
+// GetMessage returns sent message.
+func (message *Message) GetMessage() string {
+	return message.Text
+}
+
+// GetSentAt returns message event's timestamp.
+func (message *Message) GetSentAt() time.Time {
+	return message.TimeStamp.Time
+}
+
+// GetRoomID returns room identifier.
+func (message *Message) GetRoomID() string {
+	return message.Channel
 }
 
 // TeamMigrationStarted is sent when chat group is migrated between servers.

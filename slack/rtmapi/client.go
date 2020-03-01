@@ -2,6 +2,7 @@ package rtmapi
 
 import (
 	"encoding/json"
+	"errors"
 
 	"golang.org/x/net/websocket"
 )
@@ -19,6 +20,11 @@ func NewClient() *Client {
 // Connect web socket connection
 func (c *Client) Connect(url string) (*websocket.Conn, error) {
 	return websocket.Dial(url, "", "http://localhost")
+}
+
+// DecodePayload decode the payload
+func (c *Client) DecodePayload(payload json.RawMessage) (DecodedEvent, error) {
+	return c.PaylaodDecoder(payload)
 }
 
 // DefaultPayloadDecoder decodes given paylaods, which includes various kinds of events.
@@ -44,4 +50,31 @@ func DefaultPayloadDecoder(payload json.RawMessage) (DecodedEvent, error) {
 	}
 
 	return decodedEvent, nil
+}
+
+// ReceivePayload receives payload from the websocket
+func ReceivePayload(conn *websocket.Conn) (json.RawMessage, error) {
+	payload := json.RawMessage{}
+
+	err := websocket.JSON.Receive(conn, &payload)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(payload) == 0 {
+		return nil, errors.New("empty payload given")
+	}
+
+	return payload, nil
+}
+
+// TextMessage struct
+type TextMessage struct {
+	channel string
+	text    string
+}
+
+// NewTextMessage creates new TextMessage instance
+func NewTextMessage(channel, text string) *TextMessage {
+	return &TextMessage{channel: channel, text: text}
 }

@@ -12,6 +12,7 @@ const (
 	apiEndpoint = "https://slack.com/api/%s"
 )
 
+
 // Client is the client struct
 type Client struct {
 	token string
@@ -19,9 +20,7 @@ type Client struct {
 
 // NewClient returns new Client
 func NewClient(token string) *Client {
-	return &Client{
-		token: token,
-	}
+	return &Client{token: token}
 }
 
 // Get creates get request to the slack web api
